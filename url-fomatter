@@ -1,0 +1,57 @@
+#! /usr/bin/env python3
+
+import argparse
+import urllib.parse
+import sys
+import mimetypes
+import base64
+
+
+def do(f, fn):
+    line = f.readline().strip('\n')
+    while line:
+        print(fn(line), end='')
+        line = f.readline().strip('\n')
+
+
+def escape(args):
+    do(args.FILE, urllib.parse.quote)
+
+
+def unescape(args):
+    do(args.FILE, urllib.parse.unquote)
+
+
+def embed(args):
+    (mime_type, encoding) = mimetypes.guess_type(args.FILE.name)
+    data = base64.b64encode(args.FILE.read())
+    print('data:{};base64,{}'.format(mime_type, data.decode(encoding='ascii')))
+    pass
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Escape / Unescape input text as URL')
+    subparsers = parser.add_subparsers()
+
+    escape_parser = subparsers.add_parser('escape', help='Escape input text as URL')
+    escape_parser.add_argument('FILE', type=argparse.FileType('r'), default=sys.stdin, nargs='?')
+    escape_parser.set_defaults(handler=escape)
+
+    unescape_parser = subparsers.add_parser('unescape', help='Unescape input text as URL')
+    unescape_parser.add_argument('FILE', type=argparse.FileType('r'), default=sys.stdin, nargs='?')
+    unescape_parser.set_defaults(handler=unescape)
+
+    embed_parser = subparsers.add_parser('embed', help='Make Data URL string')
+    embed_parser.add_argument('FILE', type=argparse.FileType('rb'))
+    embed_parser.set_defaults(handler=embed)
+
+    return parser
+
+
+if __name__ == '__main__':
+    parser = parse_args()
+    args = parser.parse_args()
+    if hasattr(args, 'handler'):
+        args.handler(args)
+    else:
+        parser.print_help()
